@@ -77,8 +77,8 @@ def convertArgumentToPath(argv1):
 
 #def parseNamespaces_nvd.nist.gov():
 
-#def writekeytogsd(gsd_data, new_data, keyname):
-# basically try to write keys from new_data into gsd_data, if they exist don't overwrite
+#def writekeytogsd(GSD_file_data, new_data, keyname):
+# basically try to write keys from new_data into GSD_file_data, if they exist don't overwrite
 # if keyname is GSD/OSV then write the leftovers?
 # Writes the key if not exists
 
@@ -86,47 +86,45 @@ def convertArgumentToPath(argv1):
 if __name__ == "__main__":
 
     setgsdconfigGlobals()
+    # gsd_database_path
+    # gsd_tools_path
 
     convertArgumentToPath(sys.argv[1])
+    # gsd_file_path
 
-    print(gsd_file_path)
-
-    exit()
-    #file_name = os.path.basename(file_namepath)
-
-    #GSD_data = getJSONFromFile(file_namepath)
+    GSD_file_data = getJSONFromFile(gsd_file_path)
 
     # Check if gsd (lowercase) exists (has this file already been converted? partially?)
-    if "gsd" in GSD_data:
-        JSON_gsd = GSD_data["gsd"]
+    if "gsd" in GSD_file_data:
+        JSON_gsd = GSD_file_data["gsd"]
         print("Found gsd")
     else:
         JSON_gsd = {}
 
     # First we do vendors with authoritative information: (read only)
-    if "namespaces" in GSD_data:
-        if "mozilla.org" in GSD_data["namespaces"]:
-            JSON_mozillaorg = GSD_data["namespaces"]["mozilla.org"]
+    if "namespaces" in GSD_file_data:
+        if "mozilla.org" in GSD_file_data["namespaces"]:
+            JSON_mozillaorg = GSD_file_data["namespaces"]["mozilla.org"]
             print("Found Mozilla")
 
     # Second we do GSD data: (write leftovers to gsd:database_specific:GSD)
-    if "GSD" in GSD_data:
-        JSON_GSD = GSD_data["GSD"]
-        del GSD_data["GSD"]
+    if "GSD" in GSD_file_data:
+        JSON_GSD = GSD_file_data["GSD"]
+        del GSD_file_data["GSD"]
         print("Found GSD")
         
 
     # Third we do OSV data: (write leftovers to gsd:database_specific:OSV)
-    if "OSV" in GSD_data:
-        JSON_OSV = GSD_data["OSV"]
-        del GSD_data["OSV"]
+    if "OSV" in GSD_file_data:
+        JSON_OSV = GSD_file_data["OSV"]
+        del GSD_file_data["OSV"]
         print("Found OSV")
 
     # Fourth we do cve.org data and then nvd.nist.gov data: (read only)
-    if "namespaces" in GSD_data:
-        if "cve.org" in GSD_data["namespaces"]:
-            JSON_cveorg = GSD_data["namespaces"]["cve.org"]
+    if "namespaces" in GSD_file_data:
+        if "cve.org" in GSD_file_data["namespaces"]:
+            JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
             print("found cve.org")
-        if "nvd.nist.gov" in GSD_data["namespaces"]:
-            JSON_nvdnistgov = GSD_data["namespaces"]["nvd.nist.gov"]
+        if "nvd.nist.gov" in GSD_file_data["namespaces"]:
+            JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
             print("found nvd.nist.gov")   
