@@ -5,11 +5,70 @@ import os
 import json
 import re
 
+#####################################################################################################
+
 # This script assumes the input file is mostly clean 
 # but by definition stuff won't pass schema checks, that's the point of this converter
 # Read file and close.
 # Parse file, indent, overwrite file
 # So simple, see?
+
+#####################################################################################################
+
+# schema_version field 
+# schema_version: "1.3.0"
+
+# id, modified fields
+# id: GSD
+# modified: time(now)
+
+# published field
+# published publishedDate (GSD, then NVD)
+
+# withdrawn field
+# if REJECT insert end of year date, check NVD for something?
+
+# aliases field
+# CVE if any, longer term populate with Linux aliases, etc.
+
+# related field
+# IGNORE for now
+
+# summary, details fields
+# Description basicly
+
+# severity field
+######################################
+# severity[].type field
+# severity[].score field
+# Populate with CVSS_V2/CVSS_V3 string if exists in NVD data
+
+# affected fields
+######################################
+# affected[].package field
+# affected[].versions field
+# affected[].ranges[] field
+# affected[].ranges[].type field
+# affected[].ranges[].events fields
+# affected[].ranges[].repo field
+# affected[].ranges[].database_specific field
+# affected[].ecosystem_specific field
+# affected[].database_specific field
+
+# We need to walk the CVE/NVD data and also ensure that e.g. vendor is set, then product, then version, are any missing higher level data?
+
+# references field
+# Convert all existing references as "dumb" for now, map types later.
+
+# credits fields
+######################################
+# credits[].name field
+# credits[].contact[] field
+
+# database_specific field
+
+
+#####################################################################################################
 
 def getJSONFromFile(pathname):
     with open(pathname, "r") as f:
