@@ -19,7 +19,7 @@ def getJSONFromFile(pathname):
 
 # Read the ~/.gsdconfig file, e.g.:
 #{
-#	"gsd_databas_path": "/home/kurt/GitHub/gsd-database/",
+#	"gsd_database_path": "/home/kurt/GitHub/gsd-database/",
 #	"gsd_tools_path": "/home/kurt/GitHub/gsd-tools/"
 #}
 def setgsdconfigGlobals():
@@ -92,7 +92,10 @@ if __name__ == "__main__":
     convertArgumentToPath(sys.argv[1])
     # gsd_file_path
 
+    # Reminder: this needs to be global if it gets moved into a function
+    global GSD_file_data
     GSD_file_data = getJSONFromFile(gsd_file_path)
+
 
     # Check if gsd (lowercase) exists (has this file already been converted? partially?)
     if "gsd" in GSD_file_data:
@@ -124,7 +127,7 @@ if __name__ == "__main__":
     if "namespaces" in GSD_file_data:
         if "cve.org" in GSD_file_data["namespaces"]:
             JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
-            print("found cve.org")
+            print("Found cve.org")
         if "nvd.nist.gov" in GSD_file_data["namespaces"]:
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
-            print("found nvd.nist.gov")   
+            print("Found nvd.nist.gov")   
