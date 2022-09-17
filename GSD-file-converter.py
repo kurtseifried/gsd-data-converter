@@ -30,6 +30,8 @@ import datetime
 
 # withdrawn field
 # if REJECT insert end of year date, check NVD for something?
+# ["description"]["description_data"][0]["value"]: "** REJECT ** "
+
 
 # aliases field
 # CVE if any, longer term populate with Linux aliases, etc.
@@ -156,12 +158,14 @@ def parseCVEv40PUBLIC(data):
     # Check for key, write to gsd:{} if not exist:
     if "description" in data:
         for entry in data["description"]["description_data"]:
-            if entry["lang"] == "eng":
-                print("found data")
-                if "summary" not in JSON_gsd:
-                    JSON_gsd["summary"] = entry["value"]
-                if "details" not in JSON_gsd:
-                    JSON_gsd["details"] = entry["value"]
+            # No need to check language, only english is used. But what to do with multiple entries???
+            # What happens if multiple entries? write as blocks I guess? How do we zero it out and not clobber the original?
+            # Should we just do this via the API?
+             
+            if "summary" not in JSON_gsd:
+                JSON_gsd["summary"] = entry["value"]
+            if "details" not in JSON_gsd:
+                JSON_gsd["details"] = entry["value"]
     if "references" in data:
         print("references")
     if "affects" in data:
