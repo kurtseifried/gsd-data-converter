@@ -4,6 +4,7 @@ import sys
 import os
 import json
 import re
+import datetime
 
 #####################################################################################################
 
@@ -17,10 +18,12 @@ import re
 
 # schema_version field 
 # schema_version: "1.3.0"
+# DONE GLOBALLY
 
 # id, modified fields
 # id: GSD
 # modified: time(now)
+# DONE GLOBALLY
 
 # published field
 # published publishedDate (GSD, then NVD)
@@ -128,6 +131,7 @@ def convertArgumentToPath(argv1):
 
 #def parseNamespaces_mozillaorg(data):
 
+
 #def parseGSD()
 
 #def parseOSV()
@@ -136,10 +140,39 @@ def convertArgumentToPath(argv1):
 
 #def parseNamespaces_nvd.nist.gov():
 
+def determineCVEDataType(data):
+    # Check CVE, return version, state
+    CVEData_Version = data["data_version"]
+    # Not all CVE data contains state, e.g. mozilla.org, but most people that public CVE data only public PUBLIC data
+    if "CVE_data_meta" in data:
+        if "STATE" in data["CVE_data_meta"]:
+            CVEData_State = data["CVE_data_meta"]["STATE"]
+        else:
+            CVEData_State = "PUBLIC"
+    return(CVEData_Version, CVEData_State)
+
+
+def parseCVEv40PUBLIC(data):
+    # Check for key, write to gsd:{} if not exist:
+    if "description" in data:
+        for entry in data["description"]["description_data"]:
+            if entry["lang"] == "eng":
+                print("found data")
+                if "summary" not in JSON_gsd:
+                    JSON_gsd["summary"] = entry["value"]
+                if "details" not in JSON_gsd:
+                    JSON_gsd["details"] = entry["value"]
+    if "references" in data:
+        print("references")
+    if "affects" in data:
+        print("affects")
+    if "problemtype" in data:
+        print("problemtype")
+
+
 #def writekeytogsd(GSD_file_data, new_data, keyname):
 # basically try to write keys from new_data into GSD_file_data, if they exist don't overwrite
-# if keyname is GSD/OSV then write the leftovers?
-# Writes the key if not exists
+# write ALL the existing GSD/OSV data into alternate database when done, we'll delete it later.
 
 
 if __name__ == "__main__":
@@ -157,16 +190,35 @@ if __name__ == "__main__":
 
 
     # Check if gsd (lowercase) exists (has this file already been converted? partially?)
+    global JSON_gsd
     if "gsd" in GSD_file_data:
         JSON_gsd = GSD_file_data["gsd"]
         print("Found gsd")
     else:
         JSON_gsd = {}
 
+    if "schema_version" not in JSON_gsd:
+        JSON_gsd["schema_version"] = "1.3.0"
+
+    if "id" not in JSON_gsd:
+        GSD_id = re.sub("^.*/", "", gsd_file_path)
+        GSD_id = re.sub("\.json$", "", GSD_id)
+        JSON_gsd["id"] = GSD_id
+    
+    if "modified" not in JSON_gsd:
+        rfc3339time = datetime.datetime.utcnow()
+        modified = rfc3339time.isoformat("T") + "Z"
+        JSON_gsd["modified"] = modified
+    
+
     # First we do vendors with authoritative information: (read only)
     if "namespaces" in GSD_file_data:
         if "mozilla.org" in GSD_file_data["namespaces"]:
             JSON_mozillaorg = GSD_file_data["namespaces"]["mozilla.org"]
+            CVE_version, CVE_state  = determineCVEDataType(JSON_mozillaorg)
+            if CVE_version == "4.0" and CVE_state == "PUBLIC":
+                parseCVEv40PUBLIC(JSON_mozillaorg)
+
             print("Found Mozilla")
 
     # Second we do GSD data: (write leftovers to gsd:database_specific:GSD)
@@ -190,3 +242,5 @@ if __name__ == "__main__":
         if "nvd.nist.gov" in GSD_file_data["namespaces"]:
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
             print("Found nvd.nist.gov")   
+
+    print(JSON_gsd)
