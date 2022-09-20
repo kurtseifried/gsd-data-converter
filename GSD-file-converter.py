@@ -6,13 +6,21 @@ import json
 import re
 import datetime
 
+
 #####################################################################################################
 
 # This script assumes the input file is mostly clean 
 # but by definition stuff won't pass schema checks, that's the point of this converter
 # Read file and close.
-# Parse file, indent, overwrite file
-# So simple, see?
+# Parse file sections (GSD, OSV, namespaces:foo)
+# write in order of precedence:
+# 1) namespaces:mozilla.org
+# 2) GSD
+# 3) OSV
+# 4) namespaces:cve.org
+# 5) namespaces:nvd.nist.gov
+#
+# Also write the GSD and OSV data into gsd:alternate_database:GSD/OSV
 
 #####################################################################################################
 
@@ -27,11 +35,11 @@ import datetime
 
 # published field
 # published publishedDate (GSD, then NVD)
+# If not set, do globlly with now?
 
 # withdrawn field
 # if REJECT insert end of year date, check NVD for something?
 # ["description"]["description_data"][0]["value"]: "** REJECT ** "
-
 
 # aliases field
 # CVE if any, longer term populate with Linux aliases, etc.
