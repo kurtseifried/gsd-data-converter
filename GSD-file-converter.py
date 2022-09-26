@@ -130,6 +130,10 @@ def getJSONFromFile(pathname):
         file_data = json.load(f)
         return(file_data)
 
+def writeJSONToFile(pathname, data):
+    with open(pathname, "w") as f:
+        json.dump(data, f, indent=file_indent)
+        # TODO: sort_keys = True???
 
 # Read the ~/.gsdconfig file, e.g.:
 #{
@@ -175,6 +179,23 @@ def convertArgumentToPath(argv1):
     global gsd_file_path
     gsd_file_path = argv1
 
+
+def set_file_indent(file):
+    # This code breaks in 2030 and.or after we assign 1 million GSDs per year
+    file_name = os.path.basename(file)
+
+    # We match the years 2021 through 2029, 1 million and up so that's guaranteed GSD space only
+    # GSD bot uses 2 space for indent
+    # The CVE Bot uses the default 4 spaces, hence the need for checking
+    # We can't simply read the file, check the second line and count spaces because
+    # some workflows (e.g. data-enrichment for linux updates) involves using the command line jq which
+    # indents to 4 spaces and appears to have no option for 2 spaces
+    #
+    if re.match("GSD-202[1-9]-1[0-9][0-9][0-9][0-9][0-9][0-9]", file_name):
+        indent = 2
+    else:
+        indent = 4
+    return(indent)
 
 # All parse functions return a chunk of gsd:{} formatted data
 
@@ -326,12 +347,12 @@ def parseCVEv40PUBLIC(data, datatype):
                                                     range_entry["events"] = []
                                                 range_entry_event = {}
                                                 range_entry_event["fixed"] = version_value
+                                                range_entry["events"].append(range_entry_event)
                                                 # SCHEMA REQUIRES INTRODUCED IF FIXED SO SET TO BLANK
                                                 stub_introduced = {}
                                                 stub_introduced["introduced"] = ""
-                                                range_entry["events"].append(range_entry_event)
-                                                # SCHEMA REQUIRES INTRODUCED IF FIXED SO SET TO BLANK
                                                 range_entry["events"].append(stub_introduced)
+                                                #
                                             elif version_affected == "=":
                                                 # We write the "versions" string and that's it
                                                 affected_entry["version"].append(version_value)
@@ -412,6 +433,9 @@ if __name__ == "__main__":
 
     global DATA_gsd_database_specific
     DATA_gsd_database_specific = {}
+
+    global file_indent
+    file_indent = set_file_indent(gsd_file_path)
 
 
     # Check if gsd (lowercase) exists (has this file already been converted? partially?)
@@ -516,4 +540,5 @@ if __name__ == "__main__":
 
 
 
-    print(json.dumps(GSD_file_data_NEW, indent=4))
+#    print(json.dumps(GSD_file_data_NEW, indent=file_indent))
+    writeJSONToFile(gsd_file_path, GSD_file_data_NEW)
