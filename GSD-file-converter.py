@@ -326,7 +326,12 @@ def parseCVEv40PUBLIC(data, datatype):
                                                     range_entry["events"] = []
                                                 range_entry_event = {}
                                                 range_entry_event["fixed"] = version_value
+                                                # SCHEMA REQUIRES INTRODUCED IF FIXED SO SET TO BLANK
+                                                stub_introduced = {}
+                                                stub_introduced["introduced"] = ""
                                                 range_entry["events"].append(range_entry_event)
+                                                # SCHEMA REQUIRES INTRODUCED IF FIXED SO SET TO BLANK
+                                                range_entry["events"].append(stub_introduced)
                                             elif version_affected == "=":
                                                 # We write the "versions" string and that's it
                                                 affected_entry["version"].append(version_value)
@@ -445,13 +450,13 @@ if __name__ == "__main__":
                     parseCVEv40PUBLIC(JSON_mozillaorg, "vendor")
 
 
-            print("Found Mozilla")
+#            print("Found Mozilla")
 
     # Second we do GSD data: (write leftovers to gsd:database_specific:GSD)
     if "GSD" in GSD_file_data:
         JSON_GSD_OLD = GSD_file_data["GSD"]
         del GSD_file_data["GSD"]
-        print("Found GSD")
+#        print("Found GSD")
         parseGSD_OLD(JSON_GSD_OLD)
         DATA_gsd_database_specific["GSD"] = JSON_GSD_OLD
 
@@ -461,17 +466,17 @@ if __name__ == "__main__":
     if "OSV" in GSD_file_data:
         JSON_OSV = GSD_file_data["OSV"]
         del GSD_file_data["OSV"]
-        print("Found OSV")
+#        print("Found OSV")
         DATA_gsd_database_specific["OSV"] = JSON_OSV
 
     # Fourth we do cve.org data and then nvd.nist.gov data: (read only)
     if "namespaces" in GSD_file_data:
         if "cve.org" in GSD_file_data["namespaces"]:
             JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
-            print("Found cve.org")
+#            print("Found cve.org")
         if "nvd.nist.gov" in GSD_file_data["namespaces"]:
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
-            print("Found nvd.nist.gov")   
+#            print("Found nvd.nist.gov")   
 
 
     # Deduplicating strategy:
