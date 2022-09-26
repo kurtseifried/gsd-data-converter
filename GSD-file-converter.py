@@ -132,8 +132,8 @@ def getJSONFromFile(pathname):
 
 def writeJSONToFile(pathname, data):
     with open(pathname, "w") as f:
-        json.dump(data, f, indent=file_indent)
-        # TODO: sort_keys = True???
+        # Note: we sort keys to reduce git churn in future
+        json.dump(data, f, indent=file_indent, sort_keys=True)
 
 # Read the ~/.gsdconfig file, e.g.:
 #{
@@ -495,6 +495,7 @@ if __name__ == "__main__":
 
     # Fourth we do cve.org data and then nvd.nist.gov data: (read only)
     if "namespaces" in GSD_file_data:
+        JSON_namespaces = GSD_file_data["namespaces"]
         if "cve.org" in GSD_file_data["namespaces"]:
             JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
 #            print("Found cve.org")
@@ -536,7 +537,8 @@ if __name__ == "__main__":
 #    DATA_gsd_credits = {}
 
     # This goes at the end because gsd is what we are synthesizing
-    GSD_file_data_NEW["gsd"] = JSON_gsd    
+    GSD_file_data_NEW["namespaces"] = JSON_namespaces
+    GSD_file_data_NEW["gsd"] = JSON_gsd
 
 
 
