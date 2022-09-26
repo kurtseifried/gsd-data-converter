@@ -42,7 +42,8 @@ import datetime
 # ["description"]["description_data"][0]["value"]: "** REJECT ** "
 
 # aliases field
-# CVE if any, longer term populate with Linux aliases, etc.
+# CVE if any, longer term populate with Linux alias, etc.
+# TODO: Interim data structure: DATA_gsd_alias = {}
 
 # related field
 # IGNORE for now
@@ -55,6 +56,7 @@ import datetime
 # severity[].type field
 # severity[].score field
 # Populate with CVSS_V2/CVSS_V3 string if exists in NVD data
+# TODO: Interim data structure: DATA_gsd_severity = {}, [type][score]
 
 # affected fields
 ######################################
@@ -67,6 +69,7 @@ import datetime
 # affected[].ranges[].database_specific field
 # affected[].ecosystem_specific field
 # affected[].database_specific field
+# TODO: Interim data structure: DATA_gsd_affected = {}, [ecosystem][package]
 
 
 # Examples of the "version_affected" data from CVE:
@@ -109,11 +112,13 @@ import datetime
 
 # references field
 # Convert all existing references as "dumb" for now, map types later.
+# TODO: Interim data structure: DATA_gsd_references = {}, [url]
 
 # credits fields
 ######################################
 # credits[].name field
 # credits[].contact[] field
+# TODO: Interim data structure: DATA_gsd_credits = {}, [contact]
 
 # database_specific field
 
@@ -179,8 +184,19 @@ def convertArgumentToPath(argv1):
 #def parseNamespaces_mozillaorg(data):
 
 
-#def parseGSD()
-# if references parse items, if itemtype == str convert to WEB link else treat as correct
+def parseGSD_OLD(data):
+    # if references parse items, if itemtype == str convert to WEB link else treat as correct
+    if "references" in data:
+        for item in data["references"]:
+            if type(item) is str:
+                entry_item = {}
+                entry_item["type"] = "ADVISORY"
+                entry_item["url"] = item
+                reference_url = item
+                DATA_gsd_references[reference_url] = entry_item
+            elif type(item) is dict:
+                print("FOUND DICT IN REFERENCES, TELL KURT TO FIX THIS")
+                quit()
 
 #def parseOSV()
 
@@ -227,7 +243,6 @@ def parseCVEv40PUBLIC(data, datatype):
             else:
                 print("INFORMATION: FOUND MULTIPLE DESCRIPTION TEXTS")
     if "references" in data:
-        JSON_gsd["references"] = []
         if "reference_data" in data["references"]:
             for entry in data["references"]["reference_data"]:
                 entry_item = {}
@@ -236,7 +251,9 @@ def parseCVEv40PUBLIC(data, datatype):
                 else:
                     entry_item["type"] = "WEB"
                 entry_item["url"] = entry["url"]
-                JSON_gsd["references"].append(entry_item)
+                reference_url = entry["url"]
+                DATA_gsd_references[reference_url] = entry_item
+                #JSON_gsd["references"].append(entry_item)
     # Check for affected stuff, walk the data, set things to null if not exist, how to handle things like vendor name but no products?
     if "affects" in data:
         JSON_gsd["affected"] = []
@@ -345,10 +362,10 @@ def parseCVEv40PUBLIC(data, datatype):
 
         #JSON_gsd["affected"].append(entry_item)
 
-
-    if "problemtype" in data:
-        # No support for this in OSV yet so just ignore?
-        print("problemtype")
+# TODO: add support in OSV for problemtype
+#    if "problemtype" in data:
+#        # No support for this in OSV yet so just ignore?
+#        print("problemtype")
 
 
 #def writekeytogsd(GSD_file_data, new_data, keyname):
@@ -369,6 +386,28 @@ if __name__ == "__main__":
     global GSD_file_data
     GSD_file_data = getJSONFromFile(gsd_file_path)
 
+    global GSD_file_data_NEW
+    GSD_file_data_NEW = {}
+
+    # Deduplicating strategy:
+    global DATA_gsd_alias
+    DATA_gsd_alias = {}
+
+    global DATA_gsd_severity
+    DATA_gsd_severity = {}
+
+    global DATA_gsd_affected
+    DATA_gsd_affected = {}
+
+    global DATA_gsd_references
+    DATA_gsd_references = {}
+
+    global DATA_gsd_credits
+    DATA_gsd_credits = {}
+
+    global DATA_gsd_database_specific
+    DATA_gsd_database_specific = {}
+
 
     # Check if gsd (lowercase) exists (has this file already been converted? partially?)
     global JSON_gsd
@@ -382,6 +421,7 @@ if __name__ == "__main__":
         JSON_gsd["schema_version"] = "1.3.0"
 
     if "id" not in JSON_gsd:
+        global GSD_id
         GSD_id = re.sub("^.*/", "", gsd_file_path)
         GSD_id = re.sub("\.json$", "", GSD_id)
         JSON_gsd["id"] = GSD_id
@@ -395,6 +435,9 @@ if __name__ == "__main__":
     # First we do vendors with authoritative information: (read only)
     if "namespaces" in GSD_file_data:
         if "mozilla.org" in GSD_file_data["namespaces"]:
+            # Every Mozilla has a CVE for now, and sometimes we don't have a GSD entry if it's to new
+            CVE_id = re.sub("^GSD", "CVE", GSD_id)
+            DATA_gsd_alias[CVE_id] = ""
             JSON_mozillaorg = GSD_file_data["namespaces"]["mozilla.org"]
             CVE_version, CVE_state  = determineCVEDataType(JSON_mozillaorg)
             if CVE_state == "PUBLIC" or "ASSUMED_PUBLIC":
@@ -406,9 +449,12 @@ if __name__ == "__main__":
 
     # Second we do GSD data: (write leftovers to gsd:database_specific:GSD)
     if "GSD" in GSD_file_data:
-        JSON_GSD = GSD_file_data["GSD"]
+        JSON_GSD_OLD = GSD_file_data["GSD"]
         del GSD_file_data["GSD"]
         print("Found GSD")
+        parseGSD_OLD(JSON_GSD_OLD)
+        DATA_gsd_database_specific["GSD"] = JSON_GSD_OLD
+
         
 
     # Third we do OSV data: (write leftovers to gsd:database_specific:OSV)
@@ -416,6 +462,7 @@ if __name__ == "__main__":
         JSON_OSV = GSD_file_data["OSV"]
         del GSD_file_data["OSV"]
         print("Found OSV")
+        DATA_gsd_database_specific["OSV"] = JSON_OSV
 
     # Fourth we do cve.org data and then nvd.nist.gov data: (read only)
     if "namespaces" in GSD_file_data:
@@ -426,4 +473,42 @@ if __name__ == "__main__":
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
             print("Found nvd.nist.gov")   
 
-    print(json.dumps(JSON_gsd, indent=4))
+
+    # Deduplicating strategy:
+
+    if DATA_gsd_alias == {}:
+        print("ERROR: NO ALIASES, MUST BE AT LEAST ONE")
+    else:
+        JSON_gsd["alias"] = []
+        for alias_key, alias_value in DATA_gsd_alias.items():
+            JSON_gsd["alias"].append(alias_key)
+
+#    if DATA_gsd_aliaes == {}:
+
+#    DATA_gsd_severity = {}
+
+#    if DATA_gsd_affected == {}:
+
+
+    if DATA_gsd_references == {}:
+        print("ERROR: NO AFFECTED, MUST BE AT LEAST ONE")
+    else:
+        JSON_gsd["references"] = []
+        for references_key, references_value in DATA_gsd_references.items():
+            JSON_gsd["references"].append(references_value)
+
+    if DATA_gsd_database_specific == {}:
+        print("INFORMATIONAL: NO GSD/OSV data found")
+    else:
+        JSON_gsd["database_specific"] = {}
+        for database_specific_key, database_specific_value in DATA_gsd_database_specific.items():
+            JSON_gsd["database_specific"][database_specific_key] = database_specific_value
+
+#    DATA_gsd_credits = {}
+
+    # This goes at the end because gsd is what we are synthesizing
+    GSD_file_data_NEW["gsd"] = JSON_gsd    
+
+
+
+    print(json.dumps(GSD_file_data_NEW, indent=4))
