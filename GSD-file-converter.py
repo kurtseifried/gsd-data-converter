@@ -277,7 +277,6 @@ def parseCVEv40PUBLIC(data, datatype):
                 #JSON_gsd["references"].append(entry_item)
     # Check for affected stuff, walk the data, set things to null if not exist, how to handle things like vendor name but no products?
     if "affects" in data:
-        JSON_gsd["affected"] = []
         if "vendor" in data["affects"]:
             if "vendor_data" in data["affects"]["vendor"]:
                 for vendor_entry in data["affects"]["vendor"]["vendor_data"]:
@@ -288,23 +287,24 @@ def parseCVEv40PUBLIC(data, datatype):
                     else:
                         # If there is no vendor name but there is product/affected data continue on I guess
                         vendor_name = ""
-                    #
-                    # Write data structure
-                    #
-                    #
+                    if vendor_name not in DATA_gsd_affected:
+                        DATA_gsd_affected[vendor_name] = {}
+                    
                     if "product" in vendor_entry:
                         if "product_data" in vendor_entry["product"]:
                             for product_entry in vendor_entry["product"]["product_data"]:
                                 affected_entry = {}
                                 affected_entry["package"] = {}
                                 affected_entry["package"]["ecosystem"] = vendor_name
-
-
                                 if "product_name" in product_entry:
                                     # TODO: Add logic to handle the n/a and " " spaces?
                                     product_name = product_entry["product_name"]
                                 else:
                                     product_name = ""
+                                # Set the product name, create a list, there may be multiple entries
+                                # since we parse multiple data sets (e.g. mozilla.org, cve.org, etc.)
+                                if product_name not in DATA_gsd_affected[vendor_name]:
+                                    DATA_gsd_affected[vendor_name][product_name] = []
                                 #
                                 # Write data structure
                                 affected_entry["package"]["name"] = product_name
@@ -336,7 +336,8 @@ def parseCVEv40PUBLIC(data, datatype):
                                             # We are now at the bottom of the data and can write it
                                             # We need logic to handle the cases:
                                             #
-                                            # common cases:  ">"  "!<" "!=>" "?>" "!" "!>=" ">=" "<=" "=" "<"
+                                            # common cases:  ">"  "!<" "!=>" "?>" "!" "!>="    ">=" introduced and text  "<=" range < and text 
+                                            # handled: "=" "<"
                                             #
                                             if version_affected == "":
                                                 # We write the "versions" string and that's it
@@ -348,9 +349,9 @@ def parseCVEv40PUBLIC(data, datatype):
                                                 range_entry_event = {}
                                                 range_entry_event["fixed"] = version_value
                                                 range_entry["events"].append(range_entry_event)
-                                                # SCHEMA REQUIRES INTRODUCED IF FIXED SO SET TO BLANK
+                                                # Set introduced to magic "0" value (since ever)
                                                 stub_introduced = {}
-                                                stub_introduced["introduced"] = ""
+                                                stub_introduced["introduced"] = "0"
                                                 range_entry["events"].append(stub_introduced)
                                                 #
                                             elif version_affected == "=":
@@ -367,7 +368,10 @@ def parseCVEv40PUBLIC(data, datatype):
                                     # TODO: no version, so write incomplete data?
                                     version_value = ""
                                     version_affected = ""
-                                JSON_gsd["affected"].append(affected_entry)
+                                #
+                                # Change to local data structure
+                                DATA_gsd_affected[vendor_name][product_name].append(affected_entry)
+                                # JSON_gsd["affected"].append(affected_entry)
 
                                 
 
@@ -442,7 +446,6 @@ if __name__ == "__main__":
     global JSON_gsd
     if "gsd" in GSD_file_data:
         JSON_gsd = GSD_file_data["gsd"]
-        print("Found gsd")
     else:
         JSON_gsd = {}
 
@@ -454,11 +457,14 @@ if __name__ == "__main__":
         GSD_id = re.sub("^.*/", "", gsd_file_path)
         GSD_id = re.sub("\.json$", "", GSD_id)
         JSON_gsd["id"] = GSD_id
+    else:
+        GSD_id = re.sub("^.*/", "", gsd_file_path)
+        GSD_id = re.sub("\.json$", "", GSD_id)
     
-    if "modified" not in JSON_gsd:
-        rfc3339time = datetime.datetime.utcnow()
-        modified = rfc3339time.isoformat("T") + "Z"
-        JSON_gsd["modified"] = modified
+    # Modified always runs, that's the whole point of modified
+    rfc3339time = datetime.datetime.utcnow()
+    modified = rfc3339time.isoformat("T") + "Z"
+    JSON_gsd["modified"] = modified
     
 
     # First we do vendors with authoritative information: (read only)
@@ -481,10 +487,13 @@ if __name__ == "__main__":
         JSON_GSD_OLD = GSD_file_data["GSD"]
         del GSD_file_data["GSD"]
 #        print("Found GSD")
-        parseGSD_OLD(JSON_GSD_OLD)
         DATA_gsd_database_specific["GSD"] = JSON_GSD_OLD
-
+        parseGSD_OLD(JSON_GSD_OLD)
         
+    # Check for old GSD data, e.g. the mozilla entries
+    if "GSD" in JSON_gsd["database_specific"]:
+        DATA_gsd_database_specific["GSD"] = JSON_gsd["database_specific"]["GSD"]
+        parseGSD_OLD(JSON_gsd["database_specific"]["GSD"])
 
     # Third we do OSV data: (write leftovers to gsd:database_specific:OSV)
     if "OSV" in GSD_file_data:
@@ -513,15 +522,22 @@ if __name__ == "__main__":
         for alias_key, alias_value in DATA_gsd_alias.items():
             JSON_gsd["alias"].append(alias_key)
 
-#    if DATA_gsd_aliaes == {}:
-
 #    DATA_gsd_severity = {}
 
 #    if DATA_gsd_affected == {}:
+# JSON_gsd["affected"].append(affected_entry)
 
+    if DATA_gsd_affected == {}:
+        print("ERROR: NO AFFECTED, MUST BE AT LEAST ONE")
+    else:
+        JSON_gsd["affected"] = []
+        for affected_vendor_value in DATA_gsd_affected.values():
+            for affected_product_value in affected_vendor_value.values():
+                for affected_entry in affected_product_value:
+                    JSON_gsd["affected"].append(affected_entry)
 
     if DATA_gsd_references == {}:
-        print("ERROR: NO AFFECTED, MUST BE AT LEAST ONE")
+        print("ERROR: NO REFERENCES, MUST BE AT LEAST ONE")
     else:
         JSON_gsd["references"] = []
         for references_key, references_value in DATA_gsd_references.items():
@@ -541,6 +557,6 @@ if __name__ == "__main__":
     GSD_file_data_NEW["gsd"] = JSON_gsd
 
 
+    #print(json.dumps(GSD_file_data_NEW, indent=file_indent))
 
-#    print(json.dumps(GSD_file_data_NEW, indent=file_indent))
     writeJSONToFile(gsd_file_path, GSD_file_data_NEW)
