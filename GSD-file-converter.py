@@ -450,7 +450,7 @@ if __name__ == "__main__":
         JSON_gsd = {}
 
     if "schema_version" not in JSON_gsd:
-        JSON_gsd["schema_version"] = "1.3.0"
+        JSON_gsd["schema_version"] = "1.3.1"
 
     if "id" not in JSON_gsd:
         global GSD_id
@@ -491,9 +491,10 @@ if __name__ == "__main__":
         parseGSD_OLD(JSON_GSD_OLD)
         
     # Check for old GSD data, e.g. the mozilla entries
-    if "GSD" in JSON_gsd["database_specific"]:
-        DATA_gsd_database_specific["GSD"] = JSON_gsd["database_specific"]["GSD"]
-        parseGSD_OLD(JSON_gsd["database_specific"]["GSD"])
+    if "database_specific" in JSON_gsd:
+        if "GSD" in JSON_gsd["database_specific"]:
+            DATA_gsd_database_specific["GSD"] = JSON_gsd["database_specific"]["GSD"]
+            parseGSD_OLD(JSON_gsd["database_specific"]["GSD"])
 
     # Third we do OSV data: (write leftovers to gsd:database_specific:OSV)
     if "OSV" in GSD_file_data:
@@ -508,6 +509,15 @@ if __name__ == "__main__":
         if "cve.org" in GSD_file_data["namespaces"]:
             JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
 #            print("Found cve.org")
+            # Every CVE has a CVE for now, and sometimes we don't have a GSD entry if it's to new
+            CVE_id = re.sub("^GSD", "CVE", GSD_id)
+            DATA_gsd_alias[CVE_id] = ""
+            JSON_cveorg = GSD_file_data["namespaces"]["cve.org"]
+            CVE_version, CVE_state  = determineCVEDataType(JSON_cveorg)
+            if CVE_state == "PUBLIC" or "ASSUMED_PUBLIC":
+                if CVE_version == "4.0":
+                    parseCVEv40PUBLIC(JSON_cveorg, "vendor")
+
         if "nvd.nist.gov" in GSD_file_data["namespaces"]:
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
 #            print("Found nvd.nist.gov")   
