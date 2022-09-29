@@ -250,16 +250,19 @@ def determineCVEDataType(data):
 def parseCVEv40PUBLIC(data, datatype):
     # Check for key, write to gsd:{} if not exist:
     if "description" in data:
-        JSON_gsd["summary"] = ""
-        JSON_gsd["details"] = ""
+        # TODO: add checks for the common RESERVED and zero it out, it's of no interest.
+        if JSON_gsd["details"] == "** RESERVED ** This candidate has been reserved by an organization or individual that will use it when announcing a new security problem. When the candidate has been publicized, the details for this candidate will be provided.":
+            JSON_gsd["details"] = ""
         for entry in data["description"]["description_data"]:
+            # Don't overwrite the summary/details if already populated.
             if entry["lang"] == "eng":
+                # TODO: add checks for the common RESERVED and don't add it, it's of no interest.
                 # No need to check language, only english is used. But what to do with multiple entries???
                 # What happens if multiple entries? write as blocks I guess? How do we zero it out and not clobber the original?
                 # Should we just do this via the API?
-                if JSON_gsd["summary"] == "":
+                if "summary" not in JSON_gsd:
                     JSON_gsd["summary"] = entry["value"]
-                if JSON_gsd["details"] == "":
+                if "details" not in JSON_gsd:
                     JSON_gsd["details"] = entry["value"]
             else:
                 print("INFORMATION: FOUND MULTIPLE DESCRIPTION TEXTS")
@@ -520,7 +523,10 @@ if __name__ == "__main__":
 
         if "nvd.nist.gov" in GSD_file_data["namespaces"]:
             JSON_nvdnistgov = GSD_file_data["namespaces"]["nvd.nist.gov"]
-#            print("Found nvd.nist.gov")   
+#            print("Found nvd.nist.gov")
+            if "cve" in GSD_file_data["namespaces"]["nvd.nist.gov"]:
+                JSON_nvdnistgov_cve = GSD_file_data["namespaces"]["nvd.nist.gov"]["cve"]
+                parseCVEv40PUBLIC(JSON_nvdnistgov_cve, "vendor")
 
 
     # Deduplicating strategy:
