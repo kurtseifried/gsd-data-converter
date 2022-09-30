@@ -556,7 +556,7 @@ if __name__ == "__main__":
     # Deduplicating strategy:
 
     if DATA_gsd_alias == {}:
-        print("ERROR: NO ALIASES, MUST BE AT LEAST ONE")
+        print("INFORMATIONAL: NO ALIASES, ARE YOU SURE THIS OK?")
     else:
         JSON_gsd["alias"] = []
         for alias_key, alias_value in DATA_gsd_alias.items():
@@ -568,7 +568,7 @@ if __name__ == "__main__":
 # JSON_gsd["affected"].append(affected_entry)
 
     if DATA_gsd_affected == {}:
-        print("ERROR: NO AFFECTED, MUST BE AT LEAST ONE")
+        print("INFORMATIONAL: NO AFFECTED, THERE SHOULD BE AT LEAST ONE")
     else:
         JSON_gsd["affected"] = []
         for affected_vendor_value in DATA_gsd_affected.values():
@@ -593,7 +593,8 @@ if __name__ == "__main__":
 #    DATA_gsd_credits = {}
 
     # This goes at the end because gsd is what we are synthesizing
-    GSD_file_data_NEW["namespaces"] = JSON_namespaces
+    if "namespaces" in GSD_file_data_NEW:
+        GSD_file_data_NEW["namespaces"] = JSON_namespaces
     GSD_file_data_NEW["gsd"] = JSON_gsd
 
 
