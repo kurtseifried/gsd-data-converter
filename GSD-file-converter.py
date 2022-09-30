@@ -197,6 +197,30 @@ def set_file_indent(file):
         indent = 4
     return(indent)
 
+
+################################################
+
+def fix_descriptions(mydescription, myGSD_id):
+    mydescription_changed = False
+    if re.match("\"\*\* RESERVED \*\* .*", mydescription):
+        myCVE_id = re.sub("^GSD-", "CVE-", myGSD_id)
+        mydescription = "This Global Security Database entry represents a reserved CVE identifier, specifically " + myCVE_id + ", which may be in use but not yet populated. If you find " + myCVE_id + " in public, please visit https://gsd.id/" + myGSD_id + " to add the URL where you found it and any data you would like to add, we appreciate the help."
+    elif re.match("\"\*\* REJECT .*", mydescription):
+        # dedupe double spaces
+        mydescription = re.sub("  ", " ", mydescription)
+        
+        reject_unused = ["\*\* REJECT \*\* DO NOT USE THIS CANDIDATE NUMBER\. ConsultIDs: none\. Reason: The CNA or individual who requested this candidate did not associate it with any vulnerability during [0-9][0-9][0-9][0-9]\. Notes: none\.",
+                         "\*\* REJECT \*\* DO NOT USE THIS CANDIDATE NUMBER\. ConsultIDs: none\. Reason: This candidate was in a CNA pool that was not assigned to any issues during [0-9][0-9][0-9][0-9]\. Notes: none\.",
+                         "\*\* REJECT \*\* DO NOT USE THIS CANDIDATE NUMBER\. ConsultIDs: none\. Reason: This candidate was withdrawn by the CVE program\. Notes: none\.",
+                         "\*\* REJECT \*\* DO NOT USE THIS CANDIDATE NUMBER\. ConsultIDs: none\. Reason: This candidate was withdrawn by its CNA. Notes: none\."]
+        for entry in reject_unused:
+            if re.match(entry, mydescription):
+                mydescription = "This Global Security Database entry represents a CVE identifier that was withdrawn due to lack of use by the CNA that requested it, specifically " + myCVE_id + ", which should never be used. If you find " + myCVE_id + " in public, please visit https://gsd.id/" + myGSD_id + " to add the URL where you found it and any data you would like to add, we appreciate the help."
+                mydescription_changed = True
+        if mydescription_changed == False:
+            mydescription = mydescription + "\n\nThis Global Security Database entry represents a CVE identifier, specifically " + myCVE_id + ", which has some obvious problems. If you find data on " + myCVE_id + " or know about it, please visit https://gsd.id/" + myGSD_id + " to add the URL where you found it and any data you would like to add, we appreciate the help."
+    return(mydescription)
+
 # All parse functions return a chunk of gsd:{} formatted data
 
 # A second function then tries to write things to gsd:{} and either writes a new key, 
